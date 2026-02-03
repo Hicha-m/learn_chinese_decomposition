@@ -1,0 +1,23 @@
+# Core dependencies for Chinese character learning application
+
+# Data handling
+pandas>=1.5.0
+
+# Chinese character processing
+hanzipy>=0.1.0
+
+# AI/LLM APIs
+google-genai>=0.1.0
+openai>=1.0.0
+
+# Flashcard generation
+genanki>=0.13.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Progress bars
+tqdm>=4.65.0
+
+# Note: Jupyter-specific packages (IPython, ipywidgets) are NOT required
+# for the refactored modules as they are excluded from the core functionality
