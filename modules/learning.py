@@ -22,6 +22,9 @@ __all__ = [
     'get_exemple',
     'print_bubbles',
     'characteristics_hanzi',
+    'select_pinyin',
+    'build_dictionary_result',
+    'collect_pinyin_mnemonics',
 ]
 
 
@@ -132,16 +135,14 @@ def get_exemple(char_to_learn, word_to_bubbles, bubbles, build_prompt_context_fu
         Example sentence string
     """
     sentence = ""
-    input_text = print_bubbles(char_to_learn, word_to_bubbles, bubbles)
-    if input_text:
-        print("Begin")
+    if char_to_learn in word_to_bubbles:
         context_prompt = build_prompt_context_func(char_to_learn, input_text)
         text = ai_func(context_prompt)
         data.save_hanzi(char_to_learn, text, "context")
         sentence = get_first_exemple(text)
         print(sentence)
     else:
-        print("No Input")
+        print("   (No corpus entries found for this character)")
     return sentence
 
 
@@ -168,7 +169,7 @@ def print_bubbles(word, word_to_bulles, bulles):
     return input_text
 
 
-def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tonalite, pinyin_rules):
+def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tonalite, pinyin_rules=None):
     """
     Extract characteristics of a hanzi based on tonality.
     
@@ -196,12 +197,13 @@ def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tona
     components = radicals
 
     if pinyin:
-        pinyin_initial, pinyin_final, tone = pinyin_module.split_pinyin(pinyin, pinyin_rules)
+        rules = pinyin_rules or data.load_pinyin_rules()
+        pinyin_initial, pinyin_final, tone = pinyin_module.split_pinyin(pinyin, rules)
         if tonalite != "":
             tone = tonalite
-        actor = pinyin_rules["initials"].get(pinyin_initial, "")
-        scene = pinyin_rules["finals"].get(pinyin_final, "")
-        scene_tone = pinyin_rules["tones"].get(tone, "")
+        actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
+        scene = pinyin_module.get_pinyin_rules("finals", pinyin_final)
+        scene_tone = pinyin_module.get_pinyin_rules("tones", tone)
     else:
         pinyin_initial = ""
         pinyin_final = ""
@@ -215,3 +217,146 @@ def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tona
     args = [hanzi, color, pinyin, english, sound, exemple, keyword, components,
             actor, scene, scene_tone, pinyin_initial, pinyin_final, tone, tags]
     return args
+
+
+def select_pinyin(option):
+    """
+    Select a pinyin pronunciation from multiple options.
+    
+    If option contains multiple pinyin entries, prompts user to choose one.
+    Updates the option dict in-place to contain only the selected pinyin.
+    
+    Args:
+        option: Dictionary with 'pinyin' key containing list of pronunciations
+        
+    Returns:
+        The selected pinyin string, or empty string if no pinyin available
+    """
+    selected_pinyin = ""
+    
+    if option.get('pinyin'):
+        if len(option['pinyin']) > 1:
+            print("   Multiple pronunciations found:")
+            for i, p in enumerate(option['pinyin'], 1):
+                print(f"     {i}. {p}")
+            choice = input("Select pronunciation (number, default 1): ").strip()
+            if choice.isdigit() and 1 <= int(choice) <= len(option['pinyin']):
+                selected_pinyin = option['pinyin'][int(choice) - 1]
+            else:
+                selected_pinyin = option['pinyin'][0]
+        else:
+            selected_pinyin = option['pinyin'][0]
+        option['pinyin'] = [selected_pinyin]
+    
+    return selected_pinyin
+
+
+def build_dictionary_result(char_to_learn, dictionary=None):
+    """
+    Build a normalized dictionary result for a character using HanziDictionary.
+    
+    Queries the dictionary for pinyin, definitions, and search results for the given character.
+    Handles missing or empty data gracefully.
+    
+    Args:
+        char_to_learn: Character to look up
+        dictionary: Optional HanziDictionary instance. If None, uses get_dictionary() from tree module
+        
+    Returns:
+        Dictionary with keys:
+            - 'character': The character being looked up
+            - 'pinyin': List of pinyin pronunciations (or empty list if none found)
+            - 'definition': List of definition entries (or empty list if none found)
+            - 'search': Search result data (or None if no search result)
+    """
+    
+    # Use provided dictionary or get the singleton
+    if dictionary is None:
+        dictionary = tree.get_dictionary()
+    
+    result = {
+        'character': char_to_learn,
+        'pinyin': [],
+        'definition': [],
+        'search': None
+    }
+    
+    try:
+        # Get pinyin pronunciation(s)
+        pinyin_result = dictionary.get_pinyin(char_to_learn)
+        if pinyin_result:
+            result['pinyin'] = pinyin_result if isinstance(pinyin_result, list) else [pinyin_result]
+    except (AttributeError, Exception):
+        print(f"⚠️  Could not retrieve pinyin for '{char_to_learn}'")
+    
+    try:
+        # Get definition(s)
+        definition_result = dictionary.definition_lookup(char_to_learn)
+        if definition_result:
+            result['definition'] = definition_result if isinstance(definition_result, list) else [definition_result]
+    except (AttributeError, Exception):
+        print(f"⚠️  Could not retrieve definition for '{char_to_learn}'")
+    
+    try:
+        # Perform dictionary search
+        search_result = dictionary.dictionary_search(char_to_learn)
+        if search_result:
+            result['search'] = search_result
+            result['definition'] = search_result if isinstance(search_result, list) else [search_result]
+            print(f"📖 Dictionary search result for '{char_to_learn}':")
+            print(search_result)
+        else:
+            print(f"ℹ️  No dictionary search results found for '{char_to_learn}'")
+    except (AttributeError, Exception):
+        print(f"⚠️  Dictionary search unavailable for '{char_to_learn}'")
+
+
+def collect_pinyin_mnemonics(selected_pinyin, easy_note=False):
+    """
+    Collect pinyin mnemonic information from user input.
+    
+    Prompts for label, and if not easy_note and pinyin exists, prompts for
+    actor and scene for missing pinyin components.
+    
+    Args:
+        selected_pinyin: The pinyin pronunciation string
+        easy_note: Whether this is an easy note (skips actor/scene prompts)
+        
+    Returns:
+        Tuple of (label, actor, scene, tone_override, pinyin_rules)
+        where tone_override is an empty string by default
+    """
+    from . import pinyin as pinyin_module
+    
+    label = input("Enter keyword/label: ").strip()
+    tone_override = ""  # Default tone override
+    actor = ""
+    scene = ""
+    
+    if selected_pinyin and not easy_note:
+        pinyin_rules = data.load_pinyin_rules()
+        pinyin_initial, pinyin_final, _ = pinyin_module.split_pinyin(selected_pinyin, pinyin_rules)
+        
+        actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
+        scene = pinyin_module.get_pinyin_rules("finals", pinyin_final)
+
+        if not actor and pinyin_initial:
+            actor = input(f"Enter actor for initial '{pinyin_initial}': ").strip()
+        if not scene and pinyin_final:
+            scene = input(f"Enter scene for final '{pinyin_final}': ").strip()
+
+        # Save if either actor or scene was provided
+        if actor or scene:
+            # Ensure we have values for both (keep existing if one is empty)
+            if not actor:
+                actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
+            if not scene:
+                scene = pinyin_module.get_pinyin_rules("finals", pinyin_final)
+            
+            if actor and scene:
+                add_pinyin_rules(pinyin_rules, actor, scene, pinyin_initial, pinyin_final)
+        
+        return label, actor, scene, tone_override, pinyin_rules
+    else:
+        pinyin_rules = data.load_pinyin_rules() if selected_pinyin else None
+        return label, actor, scene, tone_override, pinyin_rules

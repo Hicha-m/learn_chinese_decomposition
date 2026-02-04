@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import re
 
+from . import data
+
 __all__ = [
 	"split_pinyin",
+	"get_pinyin_rules",
 ]
 
 
@@ -25,6 +28,46 @@ _TONE_MARKS = {
 	"ū": ("u", "1"), "ú": ("u", "2"), "ǔ": ("u", "3"), "ù": ("u", "4"),
 	"ǖ": ("ü", "1"), "ǘ": ("ü", "2"), "ǚ": ("ü", "3"), "ǜ": ("ü", "4"),
 }
+
+
+# Pinyin sound aliases - different spellings of the same phonetic sound
+# These map alternate forms to their canonical forms in pinyin rules
+PINYIN_ALIASES = {
+	"initials": {
+		"yi": "y",
+	},
+	"finals": {
+		"n": "en",
+		"ng": "eng",
+	}
+}
+
+
+def get_pinyin_rules(category: str, sound: str) -> str:
+	"""
+	Resolve a pinyin sound to its mnemonic/description using aliases.
+
+	Args:
+		category: Either "initials", "finals", or "tones"
+		sound: The pinyin sound to look up
+
+	Returns:
+		The mnemonic/description for the sound, or empty string if not found
+	"""
+	if not sound or not category:
+		return ""
+
+	pinyin_rules = data.load_pinyin_rules()
+	category_rules = pinyin_rules.get(category, {})
+
+	if sound in category_rules:
+		return category_rules.get(sound, "")
+
+	canonical_sound = PINYIN_ALIASES.get(category, {}).get(sound)
+	if canonical_sound:
+		return category_rules.get(canonical_sound, "")
+
+	return ""
 
 
 def _strip_tone_marks(syllable: str) -> tuple[str, str]:
