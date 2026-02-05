@@ -21,7 +21,7 @@ from .constants import (
     BUBBLES_FILE,
     LEARNED_FILE,
     TREE_RULES_FILE,
-    ANKI_FILE,
+    ANKI_TMP_FILE,
     PINYIN_RULES_FILE,
     LEARNED_CHARACTERISTIC_FILE,
     DATA_DIR,
@@ -281,7 +281,7 @@ def save_learned_chars_characteristic(learned_chars_characteristic):
 def autosave_anki(notes):
     """Auto-save Anki notes to pickle file."""
     ANKI_DIR.mkdir(exist_ok=True)
-    with open(ANKI_FILE, "wb") as f:
+    with open(ANKI_TMP_FILE, "wb") as f:
         pickle.dump(notes, f)
 
 
@@ -323,7 +323,7 @@ def load_tree_rules():
 
 def autoload_anki():
     """Auto-load Anki notes from pickle file."""
-    if not ANKI_FILE.exists():
+    if not ANKI_TMP_FILE.exists():
         return []
-    with open(ANKI_FILE, "rb") as f:
+    with open(ANKI_TMP_FILE, "rb") as f:
         return pickle.load(f)

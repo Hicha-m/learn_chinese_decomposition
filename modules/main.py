@@ -6,6 +6,7 @@ Chinese character learning application.
 """
 
 from . import config, data, tree, learning, ai, anki
+from .constants import DATA_DIR, HANZI_DIR, ANKI_DIR
 
 
 def initialize_application():
@@ -20,9 +21,9 @@ def initialize_application():
     config.initialize_config()
     
     # Create necessary directories
-    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
-    config.HANZI_DIR.mkdir(parents=True, exist_ok=True)
-    config.ANKI_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    HANZI_DIR.mkdir(parents=True, exist_ok=True)
+    ANKI_DIR.mkdir(parents=True, exist_ok=True)
     
     print("✅ Application initialized successfully")
 
@@ -73,7 +74,7 @@ def learn_new_character(target_char):
     prompt = ai.build_prompt(char_to_learn)
     try:
         explanation = ai.openrouterAIRes(
-            modele="xiaomi/mimo-v2-flash:free",
+            modele="xiaomi/mimo-v2-flash:free", # a other model
             prompt=prompt,
             question="Are you sure? If not, rewrite without mistakes."
         )

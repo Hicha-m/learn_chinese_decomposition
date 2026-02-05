@@ -136,6 +136,7 @@ def get_exemple(char_to_learn, word_to_bubbles, bubbles, build_prompt_context_fu
     """
     sentence = ""
     if char_to_learn in word_to_bubbles:
+        input_text = print_bubbles(char_to_learn, word_to_bubbles, bubbles)
         context_prompt = build_prompt_context_func(char_to_learn, input_text)
         text = ai_func(context_prompt)
         data.save_hanzi(char_to_learn, text, "context")
@@ -146,24 +147,24 @@ def get_exemple(char_to_learn, word_to_bubbles, bubbles, build_prompt_context_fu
     return sentence
 
 
-def print_bubbles(word, word_to_bulles, bulles):
+def print_bubbles(word, word_to_bubbles, bubbles):
     """
     Print bubble representations.
     
     Args:
         word: Word to display bubbles for
-        word_to_bulles: Mapping of words to bubbles
+        word_to_bubbles: Mapping of words to bubbles
         bulles: Bubble data
         
     Returns:
         Formatted string with bubble content
     """
-    indice_bulles = list(word_to_bulles[word])
-    indice_bulles.sort()
+    indice_bubbles = list(word_to_bubbles[word])
+    indice_bubbles.sort()
     input_text = ""
 
-    for i in indice_bulles:
-        for j in bulles[i]:
+    for i in indice_bubbles:
+        for j in bubbles[i]:
             input_text += j + "\n"
         input_text += "--- \n"
     return input_text
@@ -233,8 +234,8 @@ def select_pinyin(option):
         The selected pinyin string, or empty string if no pinyin available
     """
     selected_pinyin = ""
-    
-    if option.get('pinyin'):
+    print(option)
+    if option.get('pinyin'): ## erreur car option none voir v1_app
         if len(option['pinyin']) > 1:
             print("   Multiple pronunciations found:")
             for i, p in enumerate(option['pinyin'], 1):
@@ -309,6 +310,8 @@ def build_dictionary_result(char_to_learn, dictionary=None):
             print(f"ℹ️  No dictionary search results found for '{char_to_learn}'")
     except (AttributeError, Exception):
         print(f"⚠️  Dictionary search unavailable for '{char_to_learn}'")
+    
+    return result
 
 
 def collect_pinyin_mnemonics(selected_pinyin, easy_note=False):

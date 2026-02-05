@@ -55,11 +55,12 @@ HANZI_DIR = Path(f"{DIR}hanzi")  # form learning / sentences
 ANKI_DIR = Path(f"{DIR}anki")  # anki notes
 
 # File paths
-WORD_TO_BUBBLES_FILE = PATH_DIR / "word_to_bulles.json"
-BUBBLES_FILE = PATH_DIR / "bubbles.json"
+WORD_TO_BUBBLES_FILE = DATA_DIR / "word_to_bulles.json"
+BUBBLES_FILE = DATA_DIR / "bubbles.json"
 LEARNED_FILE = DATA_DIR / "learned_chars.json"
 TREE_RULES_FILE = DATA_DIR / "rules.json"
-ANKI_FILE = ANKI_DIR / "anki_notes.pkl"
+ANKI_FILE = ANKI_DIR / "mandarin_chinese.apkg"
+ANKI_TMP_FILE = ANKI_DIR / "anki_notes.pkl"
 PINYIN_RULES_FILE = DATA_DIR / "pinyin_rules.json"
 LEARNED_CHARACTERISTIC_FILE = DATA_DIR / "learned_chars_characteristic.json"
 CHARACTERS_TO_LEARN_FILE = DATA_DIR / "characters_to_learn.json"  # Target characters from ##HANZI section

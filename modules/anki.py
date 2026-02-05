@@ -12,7 +12,9 @@ import genanki
 import random
 from tqdm import tqdm
 
-from . import config, data
+from . import data
+from .config import CHINESE_MODEL_ID
+from .constants import ANKI_FILE
 
 __all__ = [
     'get_chinese_model',
@@ -38,7 +40,7 @@ def get_chinese_model():
         genanki.Model configured for Chinese character learning
     """
     return genanki.Model(
-        config.CHINESE_MODEL_ID,
+        CHINESE_MODEL_ID,
         "Chinese (Basic)",
         fields=[
             {"name": "Hanzi"},
@@ -373,7 +375,7 @@ def export_anki():
     data.autosave_anki(notes)
 
     genanki.Package(deck).write_to_file(
-        "mandarin_chinese.apkg"
+        ANKI_FILE
     )
 
     print("✅ Deck exporté avec succès")
