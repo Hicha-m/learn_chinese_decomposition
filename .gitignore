@@ -31,8 +31,9 @@ wheels/
 .vscode/
 
 # Data files (local learning data)
-data/*.pkl
-hanzi/*.pkl
+data/learned_chars_characteristic.json
+data/learned_chars.json
+hanzi/*.txt
 anki/*.pkl
 anki/*.apkg
 

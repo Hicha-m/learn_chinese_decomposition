@@ -14,14 +14,14 @@ from openai import OpenAI
 from . import config
 
 __all__ = [
-    'ai',
+    'geminiAI',
     'openrouterAIRes',
     'build_prompt',
     'build_prompt_context',
 ]
 
 
-def ai(prompt):
+def geminiAI(prompt):
     """
     Call Google Gemini AI API with prompt.
     
@@ -40,7 +40,48 @@ def ai(prompt):
     return response.text
 
 
-def openrouterAIRes(modele="openai/gpt-oss-120b:free", prompt="What is the meaning of life?", question="Are you sure? Think carefully."):
+def openrouterAI(model="openai/gpt-oss-120b:free", prompt="What is the meaning of life?"):
+    """
+    Call OpenRouter AI API.
+    
+    Args:
+        modele: Model name to use
+        prompt: Initial prompt
+        question: Follow-up question for refinement
+        
+    Returns:
+        AI response text from second round
+    """
+    try:
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=config.OPENROUTER_API_KEY,
+        )
+
+        # First API call with reasoning
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            extra_body={"reasoning": {"enabled": True}}
+        )
+
+        # Extract the assistant message
+        text = response.choices[0].message.content
+
+        print(text)
+        print("✅ Explanation generated")
+        return text
+    except Exception as e:
+        print(f"⚠️ AI generation failed: {e}")
+        return ""
+
+
+def openrouterAIRes(model="openai/gpt-oss-120b:free", prompt="What is the meaning of life?", question="Are you sure? If not, rewrite without mistakes."):
     """
     Call OpenRouter AI API with two-stage reasoning.
     
@@ -52,46 +93,51 @@ def openrouterAIRes(modele="openai/gpt-oss-120b:free", prompt="What is the meani
     Returns:
         AI response text from second round
     """
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=config.OPENROUTER_API_KEY,
-    )
+    try:
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=config.OPENROUTER_API_KEY,
+        )
 
-    # First API call with reasoning
-    response = client.chat.completions.create(
-        model=modele,
-        messages=[
+        # First API call with reasoning
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            extra_body={"reasoning": {"enabled": True}}
+        )
+
+        # Extract the assistant message with reasoning_details
+        response = response.choices[0].message
+
+        # Preserve the assistant message with reasoning_details
+        messages = [
+            {"role": "user", "content": prompt},
             {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        extra_body={"reasoning": {"enabled": True}}
-    )
+                "role": "assistant",
+                "content": response.content,
+                "reasoning_details": response.reasoning_details  # Pass back unmodified
+            },
+            {"role": "user", "content": question}
+        ]
 
-    # Extract the assistant message with reasoning_details
-    response = response.choices[0].message
-
-    # Preserve the assistant message with reasoning_details
-    messages = [
-        {"role": "user", "content": prompt},
-        {
-            "role": "assistant",
-            "content": response.content,
-            "reasoning_details": response.reasoning_details  # Pass back unmodified
-        },
-        {"role": "user", "content": question}
-    ]
-
-    # Second API call - model continues reasoning from where it left off
-    response2 = client.chat.completions.create(
-        model=modele,
-        messages=messages,
-        extra_body={"reasoning": {"enabled": True}}
-    )
-    text = response2.choices[0].message.content
-    print(text)
-    return text
+        # Second API call - model continues reasoning from where it left off
+        response2 = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            extra_body={"reasoning": {"enabled": True}}
+        )
+        text = response2.choices[0].message.content
+        print(text)
+        print("✅ Explanation generated")
+        return text
+    except Exception as e:
+        print(f"⚠️ AI generation failed: {e}")
+        return ""
 
 
 def build_prompt(char):

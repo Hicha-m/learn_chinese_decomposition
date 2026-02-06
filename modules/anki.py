@@ -269,15 +269,15 @@ def save_note_anki(note, easy_note=False):
 
 def note_anki_chinese(model, args, easy_note=False):
     """
-    Create and process a Chinese Anki note.
+    Create a Chinese Anki note and determine its difficulty level.
     
     Args:
         model: Anki model
         args: Note arguments list
-        easy_note: Whether to mark as easy note
+        easy_note: Initial easy note flag
         
     Returns:
-        Processed note
+        tuple: (note, final_easy_note_flag)
     """
     hanzi, color, pinyin, english, sound, exemple, keyword, components, actor, scene, scene_tone, pinyin_initial, pinyin_final, tone, tags = args
     
@@ -289,8 +289,7 @@ def note_anki_chinese(model, args, easy_note=False):
     else:
         note = create_chinese_note(model, *args)
     
-    save_note_anki(note, easy_note)
-    return note
+    return note, easy_note
 
 
 def remove_last_note_anki():
@@ -420,7 +419,7 @@ def export_chars_learn_to_anki():
         tags = []
         args = [hanzi, color, pinyin, english, sound, exemple, keyword, components,
                 actor, scene, scene_tone, pinyin_initial, pinyin_final, tone, tags]
-        note = note_anki_chinese(model, args, easy_note)
+        note, _ = note_anki_chinese(model, args, easy_note)
 
         deck.add_note(note)
 
@@ -429,9 +428,6 @@ def export_chars_learn_to_anki():
         })
 
     genanki.Package(deck).write_to_file(
-        "mandarin_chinese.apkg"
+        ANKI_FILE
     )
     print("✅ Deck exporté avec succès")
-
-
-# Note: export_to_anki function is not used in the application and has been excluded

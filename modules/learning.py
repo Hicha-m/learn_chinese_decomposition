@@ -38,8 +38,8 @@ def learn_character(target, builder, learned_chars):
         learned_chars: Set of already learned characters
         
     Returns:
-        Tuple of (char_to_learn, radicals_string) where char_to_learn is the next
-        character ready to learn and radicals_string is a string of its components
+        Tuple of (char_to_learn, radicals_string, status) where status is one of
+        'ok', 'complete', or 'blocked'
     """
     res = tree.analyze_character_v3(target, builder, learned_chars)
     root = res["root"]
@@ -60,13 +60,25 @@ def learn_character(target, builder, learned_chars):
 
     char_to_learn = ""
     radicaux = []
+    status = "blocked"
 
     if res["ready"]:
         char_to_learn = res["ready"][0]
         radicaux = res["dependencies"].get(char_to_learn, [])
+        status = "ok"
+    elif not res["required_radicals"] and target in learned_chars:
+        print("Congratulations! You have learned all the characters in this tree!")
+        status = "complete"
+    elif not res["required_radicals"] and target not in learned_chars:
+        # No dependencies and not learned -> target is the next character.
+        char_to_learn = target
+        radicaux = res["dependencies"].get(char_to_learn, [])
+        status = "ok"
+    else:
+        print("❌ Cannot determine next character to learn")
     radicaux = " + ".join(radicaux)
 
-    return char_to_learn, radicaux
+    return char_to_learn, radicaux, status
 
 
 def mark_as_learned(char, learned_chars):
@@ -331,7 +343,9 @@ def collect_pinyin_mnemonics(selected_pinyin, easy_note=False):
     """
     from . import pinyin as pinyin_module
     
-    label = input("Enter keyword/label: ").strip()
+    label = ""
+    while not label:
+        label = input("Enter keyword/label: ").strip()
     tone_override = ""  # Default tone override
     actor = ""
     scene = ""
@@ -343,9 +357,9 @@ def collect_pinyin_mnemonics(selected_pinyin, easy_note=False):
         actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
         scene = pinyin_module.get_pinyin_rules("finals", pinyin_final)
 
-        if not actor and pinyin_initial:
+        while not actor and pinyin_initial:
             actor = input(f"Enter actor for initial '{pinyin_initial}': ").strip()
-        if not scene and pinyin_final:
+        while not scene and pinyin_final:
             scene = input(f"Enter scene for final '{pinyin_final}': ").strip()
 
         # Save if either actor or scene was provided

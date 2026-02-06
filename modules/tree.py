@@ -238,6 +238,17 @@ def analyze_character_v3(character, builder, learned_chars):
         if all(child in learned_chars for child in children):
             ready.add(char)
 
+    # If the root itself is not learned and all its children are learned,
+    # the root is ready to learn.
+    root_children = dep_map.get(character, [])
+    if character not in learned_chars and root_children:
+        if all(child in learned_chars for child in root_children):
+            ready.add(character)
+
+    # If the root has no children, it is a standalone character.
+    if character not in learned_chars and not root_children:
+        ready.add(character)
+
     return {
         "character": character,
         "required_radicals": sorted(required),

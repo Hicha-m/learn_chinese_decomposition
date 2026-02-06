@@ -53,10 +53,13 @@ def learn_new_character(target_char):
     
     # Step 1: Learn character breakdown
     print("\n1️⃣ Analyzing character structure...")
-    char_to_learn, radicals = learning.learn_character(target_char, builder, learned_chars)
-    
-    if not char_to_learn:
-        print("❌ Cannot determine next character to learn")
+    char_to_learn, radicals, status = learning.learn_character(
+        target_char,
+        builder,
+        learned_chars
+    )
+
+    if status != "ok" or not char_to_learn:
         return
     
     print(f"\n✅ Next character to learn: {char_to_learn}")
@@ -72,18 +75,13 @@ def learn_new_character(target_char):
     # Step 3: Generate AI explanation
     print("\n3️⃣ Generating AI explanation...")
     prompt = ai.build_prompt(char_to_learn)
-    try:
-        explanation = ai.openrouterAIRes(
-            modele="xiaomi/mimo-v2-flash:free", # a other model
-            prompt=prompt,
-            question="Are you sure? If not, rewrite without mistakes."
-        )
-        data.save_hanzi(char_to_learn, explanation, "explain")
-        print("✅ Explanation generated and saved")
-    except Exception as e:
-        print(f"⚠️ AI generation failed: {e}")
-        explanation = ""
-    
+
+    explanation = ai.openrouterAIRes(
+        model="stepfun/step-3.5-flash:free",
+        prompt=prompt,
+    )
+    data.save_hanzi(char_to_learn, explanation, "explain")
+
     # Step 4: Extract example sentence
     print("\n4️⃣ Extracting example sentences...")
 
@@ -94,9 +92,9 @@ def learn_new_character(target_char):
         word_to_bubbles,
         bubbles,
         ai.build_prompt_context,
-        ai.ai
+        ai.geminiAI
     )
-
+    sentence = ""
     # Step 5: Collect mnemonics and easy_note preference
     print("\n5️⃣ Updating pinyin mnemonics...")
     
@@ -119,7 +117,8 @@ def learn_new_character(target_char):
         )
         
         model = anki.get_chinese_model()
-        note = anki.note_anki_chinese(model, characteristics, easy_note=easy_note)
+        note, easy_note = anki.note_anki_chinese(model, characteristics, easy_note=easy_note)
+        anki.save_note_anki(note, easy_note)
         print("✅ Anki card created")
     except Exception as e:
         print(f"⚠️ Card creation failed: {e}")
