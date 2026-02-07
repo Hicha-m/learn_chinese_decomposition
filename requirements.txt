@@ -19,5 +19,8 @@ python-dotenv>=1.0.0
 # Progress bars
 tqdm>=4.65.0
 
+# Testing
+pytest>=7.0.0
+
 # Note: Jupyter-specific packages (IPython, ipywidgets) are NOT required
 # for the refactored modules as they are excluded from the core functionality
