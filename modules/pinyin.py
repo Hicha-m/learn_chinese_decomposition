@@ -6,11 +6,17 @@ This module provides a clean, dependency-free implementation of
 - initial
 - final
 - tone
+
+Optimization notes:
+- Regex patterns are precompiled for performance
+- Pinyin rules are cached to avoid repeated file I/O
+- Initial candidates are cached to avoid recomputation
 """
 
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from . import data
 
@@ -43,6 +49,23 @@ PINYIN_ALIASES = {
 }
 
 
+# Precompiled regex pattern for performance
+# Matches syllables ending with tone number 1-5 (e.g., "shi4", "zhang1")
+_TONE_NUMBER_PATTERN = re.compile(r"^(.+?)([1-5])$")
+
+
+
+@lru_cache(maxsize=1)
+def _load_pinyin_rules_cached() -> dict:
+	"""
+	Load pinyin rules from disk once and cache the result.
+	
+	Uses LRU cache with maxsize=1 since we only need one set of rules.
+	This avoids repeated file I/O when get_pinyin_rules() is called many times.
+	"""
+	return data.load_pinyin_rules()
+
+
 def get_pinyin_rules(category: str, sound: str) -> str:
 	"""
 	Resolve a pinyin sound to its mnemonic/description using aliases.
@@ -57,7 +80,8 @@ def get_pinyin_rules(category: str, sound: str) -> str:
 	if not sound or not category:
 		return ""
 
-	pinyin_rules = data.load_pinyin_rules()
+	# Use cached rules instead of loading every time
+	pinyin_rules = _load_pinyin_rules_cached()
 	category_rules = pinyin_rules.get(category, {})
 
 	if sound in category_rules:
@@ -68,6 +92,7 @@ def get_pinyin_rules(category: str, sound: str) -> str:
 		return category_rules.get(canonical_sound, "")
 
 	return ""
+
 
 
 def _strip_tone_marks(syllable: str) -> tuple[str, str]:
@@ -92,27 +117,44 @@ def _strip_tone_marks(syllable: str) -> tuple[str, str]:
 def _extract_tone_number(syllable: str) -> tuple[str, str]:
 	"""
 	Extract numeric tone if present at the end (1-5).
+	
+	Uses precompiled regex pattern for performance.
 	"""
-	match = re.match(r"^(.+?)([1-5])$", syllable)
+	match = _TONE_NUMBER_PATTERN.match(syllable)
 	if match:
 		return match.group(1), match.group(2)
 	return syllable, ""
 
 
-def _get_initial_candidates(pinyin_rules: dict | None) -> list[str]:
+def _get_initial_candidates(pinyin_rules: dict | None = None) -> list[str]:
 	"""
 	Build list of possible initials, longest-first.
+	
+	Caches the default initial list to avoid recomputation.
+	When pinyin_rules is provided, uses rules directly without caching.
 	"""
+	# If explicit rules provided, use them directly
 	if pinyin_rules and isinstance(pinyin_rules, dict) and "initials" in pinyin_rules:
 		initials = list(pinyin_rules["initials"].keys())
-	else:
-		initials = [
-			"zh", "ch", "sh",
-			"b", "p", "m", "f", "d", "t", "n", "l",
-			"g", "k", "h", "r", "z", "c", "s", "y", "w",
-		]
-	initials = sorted(set(initials), key=len, reverse=True)
-	return initials
+		return sorted(set(initials), key=len, reverse=True)
+	
+	# Use cached default initials
+	return _get_default_initial_candidates()
+
+
+@lru_cache(maxsize=1)
+def _get_default_initial_candidates() -> list[str]:
+	"""
+	Get the default list of pinyin initials, cached.
+	
+	This avoids recomputing and sorting the initials list on every split_pinyin() call.
+	"""
+	initials = [
+		"zh", "ch", "sh",
+		"b", "p", "m", "f", "d", "t", "n", "l",
+		"g", "k", "h", "r", "z", "c", "s", "y", "w",
+	]
+	return sorted(set(initials), key=len, reverse=True)
 
 
 def split_pinyin(pinyin: str, pinyin_rules: dict | None = None) -> tuple[str, str, str]:

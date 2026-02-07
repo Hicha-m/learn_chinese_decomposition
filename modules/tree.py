@@ -5,9 +5,15 @@ This module contains:
 - HanziNode and HanziTreeBuilder classes for character decomposition
 - Tree traversal and analysis functions
 - Character dependency mapping
+
+Optimization notes:
+- Singletons are cached to avoid repeated initialization
+- Decomposition results are cached to avoid repeated external calls
+- Tree analysis results are cached for performance
 """
 
 from collections import defaultdict
+from functools import lru_cache
 from hanzipy.decomposer import HanziDecomposer
 from hanzipy.dictionary import HanziDictionary
 
@@ -26,25 +32,27 @@ __all__ = [
     'get_dictionary',
 ]
 
-# Module-level singletons
-_decomposer = None
-_dictionary = None
 
-
+@lru_cache(maxsize=1)
 def get_decomposer():
-    """Get or create HanziDecomposer singleton."""
-    global _decomposer
-    if _decomposer is None:
-        _decomposer = HanziDecomposer()
-    return _decomposer
+    """
+    Get or create HanziDecomposer singleton.
+    
+    Uses functools.lru_cache to ensure only one instance is created.
+    This is more robust than module-level globals.
+    """
+    return HanziDecomposer()
 
 
+@lru_cache(maxsize=1)
 def get_dictionary():
-    """Get or create HanziDictionary singleton."""
-    global _dictionary
-    if _dictionary is None:
-        _dictionary = HanziDictionary()
-    return _dictionary
+    """
+    Get or create HanziDictionary singleton.
+    
+    Uses functools.lru_cache to ensure only one instance is created.
+    This is more robust than module-level globals.
+    """
+    return HanziDictionary()
 
 
 class HanziNode:
@@ -81,6 +89,7 @@ class HanziTreeBuilder:
     Builder for creating character decomposition trees.
     
     Decomposes Chinese characters into their component parts.
+    Caches decomposition results to avoid repeated external API calls.
     """
 
     def __init__(self, overrides=None, path_overrides=None, atomic_chars=None, max_depth=8):
@@ -89,6 +98,8 @@ class HanziTreeBuilder:
         self.path_overrides = path_overrides or {}
         self.atomic_chars = set(atomic_chars or [])
         self.max_depth = max_depth
+        # Cache for decomposition results: char -> components list
+        self._decomposition_cache = {}
 
     def build_tree(self, node, visited=None):
         """
@@ -130,14 +141,9 @@ class HanziTreeBuilder:
 
         visited.add(node.character)
 
-        # 4️⃣ DECOMPOSITION
-        try:
-            result = self.decomposer.decompose(node.character, 1)
-            components = result.get("components", [])
-        except Exception:
-            return
-
-        if not components or components == [node.character]:
+        # 4️⃣ DECOMPOSITION (with caching)
+        components = self._get_components_cached(node.character)
+        if not components:
             return
 
         for comp in components:
@@ -148,6 +154,29 @@ class HanziTreeBuilder:
             )
             node.children.append(child)
             self.build_tree(child, visited.copy())
+
+    def _get_components_cached(self, character: str) -> list:
+        """
+        Get decomposition components with caching.
+        
+        Avoids repeated decomposition calls for the same character.
+        """
+        if character in self._decomposition_cache:
+            return self._decomposition_cache[character]
+        
+        try:
+            result = self.decomposer.decompose(character, 1)
+            components = result.get("components", [])
+        except Exception:
+            components = []
+        
+        # Cache and return
+        if not components or components == [character]:
+            self._decomposition_cache[character] = []
+        else:
+            self._decomposition_cache[character] = components
+        
+        return self._decomposition_cache[character]
 
 
 def print_tree(node, indent=0):

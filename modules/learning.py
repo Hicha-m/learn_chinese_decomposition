@@ -9,9 +9,14 @@ This module handles the character learning workflow:
 
 Note: Jupyter-specific UI components (widgets, IPython.display) are excluded
 as they are not necessary for the core learning functionality.
+
+Optimization notes:
+- Pinyin rules are cached to avoid repeated file I/O
+- Pinyin analysis is extracted into focused functions
 """
 
 import re
+from functools import lru_cache
 from . import config, tree, data
 
 __all__ = [
@@ -26,6 +31,17 @@ __all__ = [
     'build_dictionary_result',
     'collect_pinyin_mnemonics',
 ]
+
+
+@lru_cache(maxsize=1)
+def _load_pinyin_rules_cached():
+    """
+    Cache pinyin rules to avoid repeated file I/O.
+    
+    This function is called frequently during learning, so caching the result
+    significantly improves performance.
+    """
+    return data.load_pinyin_rules()
 
 
 def learn_character(target, builder, learned_chars):
@@ -186,7 +202,10 @@ def print_bubbles(word, word_to_bubbles, bubbles):
 
 def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tonalite, pinyin_rules=None):
     """
-    Extract characteristics of a hanzi based on tonality.
+    Extract characteristics of a hanzi for Anki card creation.
+    
+    Focuses on character data extraction. Pinyin analysis is delegated to
+    _analyze_pinyin_for_hanzi() for better separation of concerns.
     
     Args:
         char_to_learn: Character being learned
@@ -195,7 +214,7 @@ def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tona
         label: Visual/semantic label
         radicals: Component radicals string
         tonalite: Tone number override (or empty string)
-        pinyin_rules: Pinyin rules dictionary
+        pinyin_rules: Optional pinyin rules dictionary
         
     Returns:
         List of character attributes for Anki card creation
@@ -211,14 +230,12 @@ def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tona
     keyword = label
     components = radicals
 
+    # Extract pinyin information - delegated to focused function
     if pinyin:
-        rules = pinyin_rules or data.load_pinyin_rules()
-        pinyin_initial, pinyin_final, tone = pinyin_module.split_pinyin(pinyin, rules)
-        if tonalite != "":
-            tone = tonalite
-        actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
-        scene = pinyin_module.get_pinyin_rules("finals", pinyin_final)
-        scene_tone = pinyin_module.get_pinyin_rules("tones", tone)
+        rules = pinyin_rules or _load_pinyin_rules_cached()
+        pinyin_initial, pinyin_final, tone, actor, scene, scene_tone = _analyze_pinyin_for_hanzi(
+            pinyin, tonalite, rules
+        )
     else:
         pinyin_initial = ""
         pinyin_final = ""
@@ -232,6 +249,37 @@ def characteristics_hanzi(char_to_learn, option, sentence, label, radicals, tona
     args = [hanzi, color, pinyin, english, sound, exemple, keyword, components,
             actor, scene, scene_tone, pinyin_initial, pinyin_final, tone, tags]
     return args
+
+
+def _analyze_pinyin_for_hanzi(pinyin: str, tonalite: str, pinyin_rules: dict) -> tuple:
+    """
+    Analyze pinyin to extract components and get mnemonic rules.
+    
+    Extracted from characteristics_hanzi() for better code organization
+    and to enable testing of pinyin analysis logic separately.
+    
+    Args:
+        pinyin: The pinyin pronunciation string
+        tonalite: Tone override (empty string if not provided)
+        pinyin_rules: Pinyin rules dictionary for looking up mnemonics
+        
+    Returns:
+        Tuple of (initial, final, tone, actor, scene, scene_tone)
+    """
+    from . import pinyin as pinyin_module
+    
+    pinyin_initial, pinyin_final, tone = pinyin_module.split_pinyin(pinyin, pinyin_rules)
+    
+    # Override tone if provided
+    if tonalite:
+        tone = tonalite
+    
+    # Look up mnemonic rules for each component
+    actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
+    scene = pinyin_module.get_pinyin_rules("finals", pinyin_final)
+    scene_tone = pinyin_module.get_pinyin_rules("tones", tone)
+    
+    return pinyin_initial, pinyin_final, tone, actor, scene, scene_tone
 
 
 def select_pinyin(option):
@@ -353,7 +401,8 @@ def collect_pinyin_mnemonics(selected_pinyin, easy_note=False):
     scene = ""
     
     if selected_pinyin and not easy_note:
-        pinyin_rules = data.load_pinyin_rules()
+        # Use cached pinyin rules to avoid file I/O
+        pinyin_rules = _load_pinyin_rules_cached()
         pinyin_initial, pinyin_final, _ = pinyin_module.split_pinyin(selected_pinyin, pinyin_rules)
         
         actor = pinyin_module.get_pinyin_rules("initials", pinyin_initial)
@@ -377,5 +426,6 @@ def collect_pinyin_mnemonics(selected_pinyin, easy_note=False):
         
         return label, actor, scene, tone_override, pinyin_rules
     else:
-        pinyin_rules = data.load_pinyin_rules() if selected_pinyin else None
+        # Only load pinyin_rules if selected_pinyin exists
+        pinyin_rules = _load_pinyin_rules_cached() if selected_pinyin else None
         return label, actor, scene, tone_override, pinyin_rules
