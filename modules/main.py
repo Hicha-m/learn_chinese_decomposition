@@ -94,12 +94,11 @@ def learn_new_character(target_char):
         ai.build_prompt_context,
         ai.geminiAI
     )
-    sentence = ""
     # Step 5: Collect mnemonics and easy_note preference
     print("\n5️⃣ Updating pinyin mnemonics...")
     
     # Ask if this should be an easy note
-    easy_note_input = input("Create as easy note? (y/yes to enable, default no): ").strip().lower()
+    easy_note_input = input(f"Create as easy note of ${selected_pinyin} ? (y/yes to enable, default no): ").strip().lower()
     easy_note = easy_note_input in ('y', 'yes')
     
     label, _, _, tone, _ = learning.collect_pinyin_mnemonics(selected_pinyin, easy_note)
@@ -125,7 +124,7 @@ def learn_new_character(target_char):
         return
     
     # Step 7: Mark as learned
-    print("\n7 Recording progress...")
+    print("\n7️⃣ Marking character as learned...")
     learning.mark_as_learned(char_to_learn, learned_chars)
     print(f"✅ {char_to_learn} marked as learned")
     

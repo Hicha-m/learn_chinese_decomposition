@@ -104,6 +104,7 @@ def add_pinyin_rules(pinyin_rules, actor, scene, initial, final):
         initial: Pinyin initial
         final: Pinyin final
     """
+    # be careful it can create new keys.
     pinyin_rules["initials"][initial] = actor
     pinyin_rules['finals'][final] = scene
     data.save_pinyin_rules(pinyin_rules)
@@ -153,9 +154,10 @@ def get_exemple(char_to_learn, word_to_bubbles, bubbles, build_prompt_context_fu
         text = ai_func(context_prompt)
         data.save_hanzi(char_to_learn, text, "context")
         sentence = get_first_exemple(text)
-        print(sentence)
+        #print(sentence)
+        print("✅ Example sentence extracted")
     else:
-        print("   (No corpus entries found for this character)")
+        print("⚠️ (No corpus entries found for this character)")
     return sentence
 
 
@@ -317,7 +319,7 @@ def build_dictionary_result(char_to_learn, dictionary=None):
             result['search'] = search_result
             result['definition'] = search_result if isinstance(search_result, list) else [search_result]
             print(f"📖 Dictionary search result for '{char_to_learn}':")
-            print(search_result)
+            #print(search_result)
         else:
             print(f"ℹ️  No dictionary search results found for '{char_to_learn}'")
     except (AttributeError, Exception):

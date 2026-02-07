@@ -34,7 +34,7 @@ _TONE_MARKS = {
 # These map alternate forms to their canonical forms in pinyin rules
 PINYIN_ALIASES = {
 	"initials": {
-		"yi": "y",
+		"y": "yi",
 	},
 	"finals": {
 		"n": "en",

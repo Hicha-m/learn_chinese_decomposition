@@ -264,7 +264,7 @@ def save_note_anki(note, easy_note=False):
     notes_append(notes, note, easy_note)
     data.autosave_anki(notes)
     n = len(notes)
-    print(n, note.fields)
+    print(n, note.fields, easy_note)
 
 
 def note_anki_chinese(model, args, easy_note=False):
@@ -280,7 +280,6 @@ def note_anki_chinese(model, args, easy_note=False):
         tuple: (note, final_easy_note_flag)
     """
     hanzi, color, pinyin, english, sound, exemple, keyword, components, actor, scene, scene_tone, pinyin_initial, pinyin_final, tone, tags = args
-    
     if exemple == "":
         note = create_chinese_note(model, hanzi, color, keyword=keyword)
         easy_note = True

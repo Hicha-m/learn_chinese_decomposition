@@ -36,7 +36,7 @@ def geminiAI(prompt):
     response = client.models.generate_content(
         model="gemini-2.5-flash", contents=f"{prompt}"
     )
-    print(response.text)
+    #print(response.text)
     return response.text
 
 
@@ -73,7 +73,7 @@ def openrouterAI(model="openai/gpt-oss-120b:free", prompt="What is the meaning o
         # Extract the assistant message
         text = response.choices[0].message.content
 
-        print(text)
+        #print(text)
         print("✅ Explanation generated")
         return text
     except Exception as e:
@@ -132,8 +132,8 @@ def openrouterAIRes(model="openai/gpt-oss-120b:free", prompt="What is the meanin
             extra_body={"reasoning": {"enabled": True}}
         )
         text = response2.choices[0].message.content
-        print(text)
-        print("✅ Explanation generated")
+        #print(text)
+        print("✅ Text generated")
         return text
     except Exception as e:
         print(f"⚠️ AI generation failed: {e}")

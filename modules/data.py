@@ -212,6 +212,24 @@ def _merge_defaults(defaults, loaded):
     return merged
 
 
+def _safe_load_json(filepath):
+    """
+    Safely load JSON from file.
+    
+    Args:
+        filepath: Path object to JSON file
+        
+    Returns:
+        Loaded JSON data or None if parsing fails
+    """
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, TypeError) as exc:
+        print(f"⚠️  Warning: Failed to parse JSON: {exc}")
+        return None
+
+
 def save(dir, text):
     """Save text to file."""
     with open(dir, "w", encoding="utf-8") as f:
@@ -289,9 +307,18 @@ def load_learned_chars():
     """Load learned characters from JSON file."""
     if not LEARNED_FILE.exists():
         return set()
-    with open(LEARNED_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return set(data.get("learned", []))
+    
+    data = _safe_load_json(LEARNED_FILE)
+    if not isinstance(data, dict):
+        print(f"⚠️  Warning: Expected dict, using empty set ${LEARNED_FILE}")
+        return set()
+    
+    learned = data.get("learned", [])
+    if not isinstance(learned, (list, set, tuple)):
+        print("⚠️  Warning: 'learned' is not a list, using empty set")
+        return set()
+    
+    return set(learned)
 
 
 def load_pinyin_rules():
