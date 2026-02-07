@@ -27,12 +27,12 @@ class TestConfigLoading:
         assert test_config["key2"] == 42
         assert test_config["nested"]["sub_key"] == "sub_value"
 
-    def test_config_defaults_exist(self):
-        """Verify default configuration structure is available."""
-        # Config module should be importable with valid structure
-        import modules.config
-        assert modules.config is not None
-        # If it imports without error, basic config structure is sound
+    def test_config_constants_module_importable(self):
+        """Verify constants module imports successfully."""
+        from modules import constants
+        assert constants is not None
+        assert hasattr(constants, "DIR"), "Constants should have DIR attribute"
+        assert constants.DIR is not None, "DIR should be set"
 
 
 class TestConfigValidation:
@@ -40,7 +40,6 @@ class TestConfigValidation:
 
     def test_config_module_importable(self):
         """Verify config module can be imported."""
-        # Test that config module loads without errors
         try:
             from modules import config as cfg
             assert cfg is not None
@@ -52,8 +51,13 @@ class TestConfigValidation:
         from modules import constants
         
         # Should have standard attributes
-        assert hasattr(constants, "DIR")
-        assert isinstance(constants.DIR, (str, Path))
+        assert hasattr(constants, "DIR"), "Constants missing DIR"
+        assert isinstance(constants.DIR, (str, Path)), "DIR should be string or Path"
+        
+        # Check other critical paths
+        assert hasattr(constants, "DATA_DIR"), "Constants missing DATA_DIR"
+        assert hasattr(constants, "HANZI_DIR"), "Constants missing HANZI_DIR"
+        assert hasattr(constants, "ANKI_DIR"), "Constants missing ANKI_DIR"
 
 
 class TestConfigFileHandling:
@@ -74,6 +78,8 @@ class TestConfigFileHandling:
         # Should deserialize back
         loaded = json.loads(json_str)
         assert loaded["name"] == "test"
+        assert loaded["value"] == 123
+        assert loaded["items"] == ["a", "b", "c"]
 
     def test_config_file_persistence(self, tmp_path):
         """Test configuration can be written and read from file."""
@@ -82,6 +88,7 @@ class TestConfigFileHandling:
         
         # Write config
         config_file.write_text(json.dumps(test_config))
+        assert config_file.exists(), "Config file should be created"
         
         # Read config
         loaded_config = json.loads(config_file.read_text())
@@ -94,8 +101,41 @@ class TestConfigFileHandling:
         missing_file = tmp_path / "missing_config.json"
         assert not missing_file.exists()
         
-        # Reading should handle gracefully (either fail clearly or use defaults)
-        # This depends on implementation, but it should not crash unexpectedly
+        # Missing file should not prevent app from running (use defaults)
+        # This test validates the app behavior, not implementation
+
+    def test_config_handles_corrupted_json(self, tmp_path):
+        """Verify system handles corrupted JSON gracefully."""
+        corrupted_file = tmp_path / "corrupted.json"
+        corrupted_file.write_text("{invalid json}")
+        
+        # Should either:
+        # 1. Raise JSON decode error clearly, OR
+        # 2. Fall back to defaults gracefully
+        try:
+            loaded = json.loads(corrupted_file.read_text())
+            pytest.fail("Should reject invalid JSON")
+        except json.JSONDecodeError:
+            # Expected behavior - clear error on bad JSON
+            pass
+
+    def test_constants_paths_are_valid_types(self):
+        """Verify all constant paths are proper types."""
+        from modules import constants
+        
+        path_attrs = [
+            "DIR", "PATH_DIR", "DATA_DIR", "HANZI_DIR", "ANKI_DIR",
+            "WORD_TO_BUBBLES_FILE", "BUBBLES_FILE", "LEARNED_FILE",
+            "TREE_RULES_FILE", "ANKI_FILE", "ANKI_TMP_FILE",
+            "PINYIN_RULES_FILE", "LEARNED_CHARACTERISTIC_FILE",
+            "CHARACTERS_TO_LEARN_FILE"
+        ]
+        
+        for attr_name in path_attrs:
+            if hasattr(constants, attr_name):
+                attr_value = getattr(constants, attr_name)
+                assert isinstance(attr_value, (str, Path)), \
+                    f"Constant {attr_name} should be string or Path, got {type(attr_value)}"
 
     def test_config_handles_corrupted_json(self, tmp_path):
         """Verify system handles corrupted JSON configuration."""

@@ -31,16 +31,46 @@ class TestEndToEndCharacterLearning:
 class TestEndToEndErrorHandling:
     """Test end-to-end error handling scenarios."""
 
-    def test_module_integration_anki_available(self, isolate_paths):
-        """Test that Anki module is available for integration."""
-        assert hasattr(anki, "save_note_anki")
-        assert hasattr(anki, "export_anki")
-        assert callable(anki.save_note_anki)
-        assert callable(anki.export_anki)
+    def test_e2e_anki_can_create_and_export_notes(self, isolate_paths):
+        """Test complete Anki workflow: create model → note → save → export."""
+        # Create model and note
+        model = anki.get_chinese_model()
+        assert model is not None
+        
+        # Create note with content
+        note = anki.create_chinese_note(
+            model, 
+            hanzi="一", 
+            pinyin="yi1", 
+            english="one"
+        )
+        assert note is not None
+        
+        # Save note (should not raise exception)
+        anki.save_note_anki(note)
+        from modules.constants import ANKI_TMP_FILE
+        assert ANKI_TMP_FILE.exists(), "Note should be saved to autosave file"
+        
+        # Export (should create valid .apkg file)
+        anki.export_anki()
+        from modules.constants import ANKI_FILE
+        assert ANKI_FILE.exists(), "Export should create .apkg file"
+        assert ANKI_FILE.suffix == ".apkg", "Export file should have .apkg extension"
 
-    def test_module_integration_learning_workflow_functions_exist(self, isolate_paths):
-        """Test that learning module has required workflow functions."""
-        assert hasattr(learning, "mark_as_learned")
-        assert hasattr(learning, "build_dictionary_result")
-        assert callable(learning.mark_as_learned)
-        assert callable(learning.build_dictionary_result)
+    def test_e2e_learning_can_analyze_character_decomposition(self, isolate_paths):
+        """Test complete learning workflow: decompose → analyze → mark learned."""
+        # Load/create learned set
+        learned_chars = data.load_learned_chars()
+        assert isinstance(learned_chars, set), "Learned chars should be a set"
+        
+        # Build dictionary result for a character
+        result = learning.build_dictionary_result("一")
+        assert result is not None, "Dictionary result should not be None"
+        assert "character" in result, "Result should contain character key"
+        assert result["character"] == "一", "Result should contain correct character"
+        assert "pinyin" in result, "Result should contain pinyin data"
+        assert "definition" in result, "Result should contain definition data"
+        
+        # Mark character as learned
+        learning.mark_as_learned("一", learned_chars)
+        assert "一" in learned_chars, "Character should be in learned set after marking"

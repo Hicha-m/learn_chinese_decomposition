@@ -43,6 +43,12 @@ class TestCreateChineseNote:
             english="one",
         )
         assert note is not None
+        # Verify note has fields (genanki.Note has fields list)
+        assert len(note.fields) > 0, "Note should have fields"
+        # First field should be the hanzi
+        assert note.fields[0] == "一", "First field should be hanzi"
+        assert note.fields[2] == "yi1", "Pinyin field should be at index 2"
+        assert note.fields[3] == "one", "English field should be at index 3"
 
     def test_create_chinese_note_with_extra_fields(self, isolate_paths):
         """Verify note creation with optional fields."""
@@ -56,6 +62,11 @@ class TestCreateChineseNote:
             exemple="example text",
         )
         assert note is not None
+        # Verify all fields are set
+        assert note.fields[0] == "二", "Hanzi field should be correct"
+        assert note.fields[2] == "er4", "Pinyin field should be correct"
+        assert note.fields[3] == "two", "English field should be correct"
+        assert note.fields[7] == "丨 + 丨", "Components field should be correct"
 
     def test_create_chinese_note_with_empty_fields(self, isolate_paths):
         """Verify note creation handles empty optional fields."""
@@ -69,6 +80,12 @@ class TestCreateChineseNote:
             exemple="",
         )
         assert note is not None
+        # Verify required fields are still present
+        assert note.fields[0] == "三", "Hanzi field must be set"
+        assert note.fields[2] == "san1", "Pinyin field must be set"
+        # Note has 14 fields: Hanzi, Color, Pinyin, English, Sound, Exemple, 
+        # Keyword, Components, Actor, Scene, Scene_tone, Pinyin_initial, Pinyin_final, Tone
+        assert len(note.fields) == 14, "All fields should be present (14 total)"
 
     def test_create_chinese_note_with_unicode(self, isolate_paths):
         """Verify note creation with unicode characters."""
@@ -80,6 +97,10 @@ class TestCreateChineseNote:
             english="center/middle",
         )
         assert note is not None
+        # Verify unicode is preserved
+        assert note.fields[0] == "中", "Unicode hanzi should be preserved"
+        # Pinyin should contain the tone-marked character
+        assert note.fields[2] == "zhōng", "Pinyin should preserve tone mark"
 
     def test_create_chinese_note_all_fields(self, isolate_paths):
         """Verify note creation with all available fields."""
@@ -103,6 +124,15 @@ class TestCreateChineseNote:
             tags=["test"],
         )
         assert note is not None
+        # Verify key fields are preserved in order:
+        # [Hanzi(0), Color(1), Pinyin(2), English(3), Sound(4), Exemple(5), 
+        #  Keyword(6), Components(7), Actor(8), Scene(9), Scene_tone(10),
+        #  Pinyin_initial(11), Pinyin_final(12), Tone(13)]
+        assert note.fields[0] == "長", "Hanzi field must match"
+        assert note.fields[1] == "red", "Color field must match"
+        assert note.fields[2] == "chang2", "Pinyin field must match"
+        assert note.fields[3] == "long", "English field must match"
+        assert note.fields[6] == "kw", "Keyword field must match"
 
 
 class TestSaveNoteAnki:
