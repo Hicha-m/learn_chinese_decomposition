@@ -1,4 +1,5 @@
 import builtins
+import zipfile
 
 import modules.ai as ai
 import modules.anki as anki
@@ -196,3 +197,18 @@ def test_menu_learn_flow_anki_failure(monkeypatch, isolate_paths, capsys):
 
     out = capsys.readouterr().out
     assert "Card creation failed" in out
+
+
+def test_export_anki_creates_valid_apkg(monkeypatch, isolate_paths):
+    model = anki.get_chinese_model()
+    note = anki.create_chinese_note(model, "一", pinyin="yi1", english="one")
+
+    data.autosave_anki([{"note": note, "easy_note": False}])
+
+    anki.export_anki()
+
+    anki_file = anki.ANKI_FILE
+    assert anki_file.exists()
+
+    with zipfile.ZipFile(anki_file, "r") as archive:
+        assert "collection.anki2" in archive.namelist()

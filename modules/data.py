@@ -79,7 +79,7 @@ DEFAULT_PINYIN_RULES = {
         "zi": "",
         "ci": "",
         "si": "",
-        "y": "",    # female (canonical form - yi is alias)
+        "yi": "",   # canonical form (alias: y)
         "bi": "",
         "pi": "",
         "mi": "",
@@ -182,18 +182,15 @@ def _merge_defaults(defaults, loaded):
             
         default_value = defaults.get(key)
         
-        # For nested dicts, merge recursively
-        if isinstance(value, dict) and isinstance(default_value, dict):
-            merged[key].update(value)
         # For sets, try to convert if we get a list
-        elif isinstance(default_value, set):
+        if isinstance(default_value, set):
             if isinstance(value, (list, set)):
                 merged[key] = set(value)
             else:
                 print(f"⚠️  Warning: Key '{key}' expected set/list but got {type(value).__name__}, using default")
                 merged[key] = default_value
-        # For tuples in dicts (like path_overrides), special handling
-        elif isinstance(default_value, dict) and key == "path_overrides":
+        # For tuples in dicts (like path_overrides), special handling BEFORE generic dict merge
+        elif isinstance(default_value, dict) and key == "path_overrides" and isinstance(value, dict):
             # Convert string keys back to tuples if needed
             converted = {}
             for k, v in value.items():
@@ -205,7 +202,10 @@ def _merge_defaults(defaults, loaded):
                         print(f"⚠️  Warning: Could not parse tuple key '{k}', skipping")
                         continue
                 converted[k] = v
-            merged[key] = converted
+            merged[key].update(converted)
+        # For nested dicts, merge recursively
+        elif isinstance(value, dict) and isinstance(default_value, dict):
+            merged[key].update(value)
         else:
             merged[key] = value
     

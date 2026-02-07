@@ -19,3 +19,22 @@ def test_build_dictionary_result_fallback_on_exception():
     assert result["pinyin"] == []
     assert result["definition"] == []
     assert result["search"] is None
+
+
+def test_learn_character_ready_root_when_dependencies_learned(monkeypatch):
+    class SimpleDecomposer:
+        def decompose(self, char, depth):
+            if char == "A":
+                return {"components": ["B"]}
+            return {"components": []}
+
+    monkeypatch.setattr(learning.tree, "get_decomposer", lambda: SimpleDecomposer())
+
+    builder = learning.tree.HanziTreeBuilder(max_depth=3)
+    learned = {"B"}
+
+    char_to_learn, radicals, status = learning.learn_character("A", builder, learned)
+
+    assert char_to_learn == "A"
+    assert radicals == "B"
+    assert status == "ok"
