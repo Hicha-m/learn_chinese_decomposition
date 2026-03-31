@@ -15,6 +15,7 @@ import json
 import pickle
 import copy
 from collections import defaultdict
+import log
 
 from .constants import (
     WORD_TO_BUBBLES_FILE,
@@ -277,9 +278,10 @@ def save_learned_chars(learned_chars):
 def save_hanzi(char, text, name):
     """Save hanzi character data to file."""
     HANZI_DIR.mkdir(exist_ok=True)
-    file_path = HANZI_DIR / f"{char}_{name}.txt"
+    file_path = HANZI_DIR / f"{char}_{name}.md"
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(text)
+        log.info(f"Saved in {file_path}")
 
 
 def save_pinyin_rules(pinyin_rules):

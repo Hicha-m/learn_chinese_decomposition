@@ -4,8 +4,7 @@ Main execution module.
 This module contains the main workflow and entry point for the
 Chinese character learning application.
 """
-
-from . import config, data, tree, learning, ai, anki
+from . import config, data, tree, learning, ai, anki, log
 from .constants import DATA_DIR, HANZI_DIR, ANKI_DIR
 
 

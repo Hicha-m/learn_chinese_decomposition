@@ -33,7 +33,8 @@ wheels/
 # Data files (local learning data)
 data/learned_chars_characteristic.json
 data/learned_chars.json
-hanzi/*.txt
+data/pinyin_rules.json
+hanzi/*.md
 anki/*.pkl
 anki/*.apkg
 
